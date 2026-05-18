@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meu Gartic Multiplayer</title>
+    <title>Gartic Serverless com Firebase</title>
     <style>
         body {
             margin: 0; padding: 0;
@@ -57,7 +57,6 @@
         }
         .menu-item:hover, .menu-item.ativo { background-color: #2a2a2a; color: white; border-left: 4px solid #4caf50; }
 
-        /* --- NOVO: CONTAINER DO TOP PLACAR --- */
         .ranking-container {
             margin-top: auto; padding: 15px; border-top: 1px solid #333;
             background-color: #0a0a0a; max-height: 200px; overflow-y: auto;
@@ -67,10 +66,9 @@
         .ranking-item img { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; }
         .ranking-item .pontos { margin-left: auto; color: #4caf50; font-weight: bold; }
 
-        /* --- LADO DO JOGO --- */
+        /* --- ÁREA DO JOGO --- */
         .area-jogo { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 20px; background-color: #1a1a1a; }
         
-        /* NOVO: BANNER DE STATUS DO JOGO */
         #painel-jogo {
             background-color: #2a2a2a; width: 100%; max-width: 800px; padding: 12px;
             border-radius: 10px; text-align: center; font-size: 18px; font-weight: bold;
@@ -82,34 +80,31 @@
         canvas { background-color: white; border-radius: 10px; cursor: crosshair; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         button { border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
         #btn-limpar { padding: 10px 15px; background-color: #b3261e; color: white; }
-        #btn-limpar:hover { background-color: #8c1d18; }
 
-        /* --- LADO DO CHAT --- */
-        .area-chat { width: 300px; background-color: #242424; display: flex; flex-direction: column; border-left: 1px solid #333; transition: width 0.3s, flex 0.3s; }
-        #status { padding: 15px; text-align: right; font-style: italic; font-weight: bold; font-size: 0.9em; }
+        /* --- CHAT --- */
+        .area-chat { width: 300px; background-color: #242424; display: flex; flex-direction: column; border-left: 1px solid #333; }
+        #status { padding: 15px; text-align: right; font-style: italic; font-weight: bold; font-size: 0.9em; color: #4caf50; }
         .mensagens { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
         .msg-box { display: flex; gap: 10px; align-items: flex-start; }
         .msg-avatar { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; }
         .msg-conteudo { background-color: #333; padding: 8px 12px; border-radius: 8px; font-size: 0.9em; flex: 1; word-wrap: break-word; }
         .msg-conteudo strong { color: #4caf50; display: block; margin-bottom: 3px; font-size: 0.85em;}
-        .img-no-chat { max-width: 100%; max-height: 250px; border-radius: 8px; margin-top: 8px; display: block; }
+        
         .controles-chat { display: flex; padding: 15px; gap: 10px; background-color: #1f1f1f; border-top: 1px solid #333; }
         .inputs-chat { display: flex; flex-direction: column; gap: 8px; flex: 1; }
-        .inputs-chat input { padding: 10px; border-radius: 5px; border: 1px solid #444; background-color: #333; color: white; outline: none; width: 100%; box-sizing: border-box; }
+        .inputs-chat input { padding: 10px; border-radius: 5px; border: 1px solid #444; background-color: #333; color: white; outline: none; }
         #btn-enviar { padding: 10px 20px; background-color: #4caf50; color: white; }
-        #btn-enviar:hover { background-color: #388e3c; }
     </style>
 </head>
 <body>
 
     <div id="tela-login">
         <div class="caixa-login">
-            <h2 style="margin:0;">Entrar no Gartic</h2>
+            <h2 style="margin:0;">Gartic Firebase</h2>
             <img id="preview-avatar" src="https://via.placeholder.com/80?text=Foto" alt="Preview">
-            <label style="font-size: 14px; text-align: left;">URL do seu Avatar:</label>
-            <input type="url" id="input-url-imagem" class="input-login" placeholder="Cole o URL da imagem">
+            <input type="url" id="input-url-imagem" class="input-login" placeholder="URL da foto de perfil">
             <input type="text" id="input-nome" class="input-login" placeholder="Seu Nome" maxlength="15">
-            <button class="btn-entrar" onclick="entrarNoJogo()">Entrar</button>
+            <button class="btn-entrar" onclick="entrarNoJogo()">Jogar Instantaneamente</button>
         </div>
     </div>
 
@@ -117,7 +112,7 @@
         <div class="barra-lateral">
             <div class="perfil-lateral">
                 <img id="avatar-lateral" src="" alt="Avatar">
-                <strong id="nome-lateral" style="font-size: 18px;">Nome</strong>
+                <strong id="nome-lateral">Nome</strong>
             </div>
             <div class="menu-item ativo" id="menu-gartic">🎨 Gartic</div>
             <div class="menu-item" id="menu-chat">💬 Chat Global</div>
@@ -129,8 +124,7 @@
         </div>
 
         <div class="area-jogo" id="area-desenho">
-            <div id="painel-jogo">Conectando ao jogo...</div>
-            
+            <div id="painel-jogo">Carregando Firebase...</div>
             <div class="ferramentas" id="barra-ferramentas">
                 <label>Cor: <input type="color" id="cor-pincel" value="#000000"></label>
                 <label>Tamanho: <input type="range" id="tam-pincel" min="1" max="20" value="5"></label>
@@ -139,44 +133,56 @@
             <canvas id="lousa" width="800" height="550"></canvas>
         </div>
 
-        <div class="area-chat" id="area-chat-painel">
-            <div id="status">❌ Conectando...</div>
+        <div class="area-chat">
+            <div id="status">● Firebase Conectado</div>
             <div class="mensagens" id="chat"></div>
             <div class="controles-chat">
                 <div class="inputs-chat">
-                    <input type="text" id="msg-texto" placeholder="Digite uma mensagem ou chute...">
-                    <input type="url" id="msg-url-enviar" placeholder="URL da imagem no chat (opcional)" style="font-size: 12px; padding: 6px;">
+                    <input type="text" id="msg-texto" placeholder="Chute a palavra aqui...">
                 </div>
                 <button id="btn-enviar">Enviar</button>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
     <script>
-        // --- LINKS E ABAS ---
-        const LINK_DO_RENDER = "https://meu-site-abaitolado.onrender.com"; 
-        const socket = io(LINK_DO_RENDER);
+        // ==========================================
+        //  COLE AS CONFIGURAÇÕES DO SEU FIREBASE AQUI
+        // ==========================================
+        const firebaseConfig = {
+            apiKey: "SUA_API_KEY",
+            authDomain: "SEU_AUTH_DOMAIN",
+            databaseURL: "Sua_DATABASE_URL",
+            projectId: "SEU_PROJECT_ID",
+            storageBucket: "SEU_STORAGE_BUCKET",
+            messagingSenderId: "SEU_MESSAGING_SENDER_ID",
+            appId: "SUA_APP_ID"
+        };
+        
+        // Inicializa o Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
 
-        const btnMenuGartic = document.getElementById('menu-gartic');
-        const btnMenuChat = document.getElementById('menu-chat');
-        const areaDesenho = document.getElementById('area-desenho');
-        const areaChatPainel = document.getElementById('area-chat-painel');
-
-        btnMenuGartic.addEventListener('click', () => {
-            btnMenuGartic.classList.add('ativo'); btnMenuChat.classList.remove('ativo');
-            areaDesenho.style.display = 'flex'; areaChatPainel.style.width = '300px'; areaChatPainel.style.flex = 'none';
-        });
-        btnMenuChat.addEventListener('click', () => {
-            btnMenuChat.classList.add('ativo'); btnMenuGartic.classList.remove('ativo');
-            areaDesenho.style.display = 'none'; areaChatPainel.style.width = 'auto'; areaChatPainel.style.flex = '1';
-        });
-
-        // --- LOGIN DO JOGO ---
+        // Variáveis Locais do Jogador
+        const meuId = Math.random().toString(36).substring(2, 9);
         let meuNome = "Anônimo";
         let meuAvatar = "https://via.placeholder.com/80?text=Foto";
+        
+        // Dados de Estado do Turno Atual
+        let palavraAtual = "";
+        let atualDesenhistaId = "";
+        let estadoJogo = "aguardando";
+        let jogadoresAtuais = {};
+        let amIAdmin = false;
+        let podeDesenhar = false;
 
-        document.getElementById('input-url-imagem').addEventListener('input', function(e) {
+        const palavras = ["banana", "gato", "cachorro", "carro", "computador", "casa", "aviao", "maca", "sol", "futebol", "sorvete", "relogio", "girafa", "caneta", "livro"];
+
+        // Preview da imagem de login
+        document.getElementById('input-url-imagem').addEventListener('input', (e) => {
             meuAvatar = e.target.value.trim() || "https://via.placeholder.com/80?text=Foto";
             document.getElementById('preview-avatar').src = meuAvatar;
         });
@@ -190,20 +196,88 @@
             document.getElementById('nome-lateral').innerText = meuNome;
             document.getElementById('avatar-lateral').src = meuAvatar;
 
-            // Envia as suas credenciais direto para o servidor registrar no placar
-            socket.emit('entrar_jogo', { nome: meuNome, avatar: meuAvatar });
+            // Salva sua presença no Firebase
+            const meuPerfilRef = database.ref('jogadores/' + meuId);
+            meuPerfilRef.set({ nome: meuNome, avatar: meuAvatar, pontos: 0 });
+            
+            // Remove você do banco automaticamente se fechar a aba ou cair a internet!
+            meuPerfilRef.onDisconnect().remove();
         }
 
-        // --- SISTEMA DE MECÂNICA GARTIC (LOUSA TRAVADA) ---
-        let podeDesenhar = false; 
+        // --- SISTEMA DE SINCRONIZAÇÃO DE PLACAR E TURNOS ---
+        database.ref('jogadores').on('value', (snapshot) => {
+            jogadoresAtuais = snapshot.val() || {};
+            const ids = Object.keys(jogadoresAtuais);
+            
+            // O primeiro da lista vira o "Admin" para ditar as rodadas de forma organizada
+            amIAdmin = (ids[0] === meuId);
+            
+            // Atualiza Interface de Pontuação Ordenada
+            const listaRanking = document.getElementById('lista-ranking');
+            listaRanking.innerHTML = "";
+            const listaOrdenada = Object.values(jogadoresAtuais).sort((a, b) => b.pontos - a.pontos);
+            listaOrdenada.forEach(jog => {
+                const item = document.createElement('div');
+                item.className = 'ranking-item';
+                item.innerHTML = `<img src="${jog.avatar}"> <span>${jog.nome}</span> <span class="pontos">${jog.pontos} pts</span>`;
+                listaRanking.appendChild(item);
+            });
+
+            // Se houver 2 pessoas ou mais e o jogo estiver parado, o admin inicia o turno
+            if (amIAdmin && ids.length >= 2 && estadoJogo === "aguardando") {
+                proximoTurno();
+            }
+        });
+
+        function proximoTurno() {
+            const ids = Object.keys(jogadoresAtuais);
+            if(ids.length < 2) return;
+
+            const desenhistaAleatorio = ids[Math.floor(Math.random() * ids.length)];
+            const palavraAleatoria = palavras[Math.floor(Math.random() * palavras.length)];
+            
+            database.ref('linhas').remove(); // Apaga desenhos antigos do banco
+            database.ref('jogo').set({
+                desenhistaId: desenhistaAleatorio,
+                desenhistaNome: jogadoresAtuais[desenhistaAleatorio].nome,
+                palavra: palavraAleatoria,
+                estado: "jogando",
+                limpezaId: Math.random() // Força atualização de limpeza de lousa
+            });
+        }
+
+        // Monitora as mudanças na rodada
+        database.ref('jogo').on('value', (snapshot) => {
+            const dados = snapshot.val();
+            if (!dados) {
+                document.getElementById('painel-jogo').innerText = "⏳ Aguardando jogadores suficientes...";
+                estadoJogo = "aguardando";
+                return;
+            }
+
+            estadoJogo = dados.estado;
+            atualDesenhistaId = dados.desenhistaId;
+            palavraAtual = dados.palavra;
+            podeDesenhar = (atualDesenhistaId === meuId);
+
+            const painelJogo = document.getElementById('painel-jogo');
+            const barraFerramentas = document.getElementById('barra-ferramentas');
+
+            if (podeDesenhar) {
+                painelJogo.innerHTML = `✏️ É a sua vez! Desenhe a palavra: <span style="color:#4caf50;">${palavraAtual.toUpperCase()}</span>`;
+                barraFerramentas.style.opacity = "1"; barraFerramentas.style.pointerEvents = "auto";
+            } else {
+                let dicas = "_ ".repeat(palavraAtual.length).trim();
+                painelJogo.innerHTML = `👀 ${dados.desenhistaNome} desenhando! Palavra com ${palavraAtual.length} letras: <span style="color:#ffeb3b;">${estadoJogo === 'jogando' ? dicas : palavraAtual.toUpperCase()}</span>`;
+                barraFerramentas.style.opacity = "0.4"; barraFerramentas.style.pointerEvents = "none";
+            }
+        });
+
+        // --- SISTEMA DE LOUSA E DESENHO ---
         const canvas = document.getElementById('lousa');
         const ctx = canvas.getContext('2d');
         const corPincel = document.getElementById('cor-pincel');
         const tamPincel = document.getElementById('tam-pincel');
-        const btnLimpar = document.getElementById('btn-limpar');
-        const painelJogo = document.getElementById('painel-jogo');
-        const barraFerramentas = document.getElementById('barra-ferramentas');
-
         let desenhando = false;
         let posAnterior = { x: 0, y: 0 };
 
@@ -212,108 +286,76 @@
             return { x: e.clientX - rect.left, y: e.clientY - rect.top };
         }
 
-        canvas.addEventListener('mousedown', (e) => { 
-            if(!podeDesenhar) return;
-            desenhando = true; posAnterior = getPosicaoMouse(e); 
-        });
+        canvas.addEventListener('mousedown', (e) => { if(!podeDesenhar) return; desenhando = true; posAnterior = getPosicaoMouse(e); });
         canvas.addEventListener('mouseup', () => desenhando = false);
         canvas.addEventListener('mouseout', () => desenhando = false);
         canvas.addEventListener('mousemove', (e) => {
             if (!desenhando || !podeDesenhar) return;
             const posAtual = getPosicaoMouse(e);
-            desenharLinha(posAnterior, posAtual, corPincel.value, tamPincel.value);
-            socket.emit('desenhar', { anterior: posAnterior, atual: posAtual, cor: corPincel.value, tamanho: tamPincel.value });
+            
+            // Salva o traço diretamente no Firebase
+            database.ref('linhas').push({
+                anterior: posAnterior, atual: posAtual, cor: corPincel.value, tamanho: tamPincel.value, autor: meuId
+            });
             posAnterior = posAtual;
         });
 
         function desenharLinha(anterior, atual, cor, tamanho) {
             ctx.beginPath(); ctx.moveTo(anterior.x, anterior.y); ctx.lineTo(atual.x, atual.y);
-            ctx.strokeStyle = cor; ctx.lineWidth = tamanho; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke(); ctx.closePath();
+            ctx.strokeStyle = cor; ctx.lineWidth = tamanho; ctx.lineCap = 'round'; ctx.stroke(); ctx.closePath();
         }
 
-        socket.on('desenhar', (dados) => { desenharLinha(dados.anterior, dados.atual, dados.cor, dados.tamanho); });
-        btnLimpar.addEventListener('click', () => { if(podeDesenhar) { limparTela(); socket.emit('limpar'); } });
-        function limparTela() { ctx.clearRect(0, 0, canvas.width, canvas.height); }
-        socket.on('limpar', limparTela);
-
-        // --- ESCUTANDO EVENTOS DO JUIZ (SERVER) ---
-        
-        // Recebe o novo turno do servidor
-        socket.on('novo_turno', (dados) => {
-            limparTela();
-            podeDesenhar = dados.eODesenhista;
-            
-            if (podeDesenhar) {
-                painelJogo.innerHTML = `✏️ É a sua vez! Desenhe a palavra: <span style="color:#4caf50;">${dados.palavra.toUpperCase()}</span>`;
-                barraFerramentas.style.opacity = "1";
-                barraFerramentas.style.pointerEvents = "auto";
-            } else {
-                painelJogo.innerHTML = `👀 ${dados.desenhista} está desenhando! Palavra: <span style="color:#ffeb3b;">${dados.palavra}</span>`;
-                barraFerramentas.style.opacity = "0.4";
-                barraFerramentas.style.pointerEvents = "none";
-            }
+        // Escuta novas linhas enviadas por qualquer jogador
+        database.ref('linhas').on('child_added', (snapshot) => {
+            const linha = snapshot.val();
+            desenharLinha(linha.anterior, linha.atual, linha.cor, linha.tamanho);
         });
 
-        // Recebe atualização de placar
-        socket.on('atualizar_placar', (jogadores) => {
-            const listaRanking = document.getElementById('lista-ranking');
-            listaRanking.innerHTML = "";
-            
-            // Transforma o objeto em Array e organiza do maior ponto para o menor
-            const listaOrdenada = Object.values(jogadores).sort((a, b) => b.pontos - a.pontos);
-            
-            listaOrdenada.forEach(jog => {
-                const item = document.createElement('div');
-                item.className = 'ranking-item';
-                item.innerHTML = `
-                    <img src="${jog.avatar}" alt="Avatar">
-                    <span>${jog.nome}</span>
-                    <span class="pontos">${jog.pontos} pts</span>
-                `;
-                listaRanking.appendChild(item);
-            });
-        });
+        // Escuta limpezas de tela
+        database.ref('linhas').on('child_removed', () => { ctx.clearRect(0, 0, canvas.width, canvas.height); });
+        document.getElementById('btn-limpar').addEventListener('click', () => { if(podeDesenhar) database.ref('linhas').remove(); });
 
-        socket.on('status_jogo', (dados) => {
-            painelJogo.innerHTML = dados.msg;
-        });
-
-        // --- SISTEMA DE CHAT ---
+        // --- CHAT E SISTEMA DE CHUTES/ACERTOS ---
         const btnEnviar = document.getElementById('btn-enviar');
         const inputMsg = document.getElementById('msg-texto');
-        const inputUrlImagemChat = document.getElementById('msg-url-enviar');
         const divChat = document.getElementById('chat');
-        const statusDiv = document.getElementById('status');
-
-        socket.on('connect', () => { statusDiv.innerHTML = '✅ Online'; statusDiv.style.color = '#4caf50'; });
-        socket.on('connect_error', () => { statusDiv.innerHTML = '❌ Servidor Offline'; statusDiv.style.color = '#b3261e'; });
 
         function enviarMensagem() {
             const msg = inputMsg.value.trim();
-            const urlImgChat = inputUrlImagemChat.value.trim();
-            if (msg !== '' || urlImgChat !== '') {
-                socket.emit('chat', { nome: meuNome, avatar: meuAvatar, mensagem: msg, imagemEnviada: urlImgChat });
-                inputMsg.value = ''; inputUrlImagemChat.value = '';
+            if (msg === '') return;
+
+            // Validação de acerto
+            if (estadoJogo === "jogando" && !podeDesenhar && msg.toLowerCase() === palavraAtual.toLowerCase()) {
+                database.ref('jogo/estado').set('acertou'); // Trava rodada para evitar duplo acerto simultâneo
+                
+                // Bonifica os pontos usando transações matemáticas seguras
+                database.ref(`jogadores/${meuId}/pontos`).transaction(p => (p || 0) + 100);
+                database.ref(`jogadores/${atualDesenhistaId}/pontos`).transaction(p => (p || 0) + 50);
+
+                database.ref('chat').push({
+                    nome: "SISTEMA", mensagem: `🎉 ${meuNome} ACERTOU! A palavra era: ${palavraAtual.toUpperCase()}!`
+                });
+
+                setTimeout(() => { if (amIAdmin) proximoTurno(); }, 3500);
+            } else {
+                // Mensagem convencional de chat
+                database.ref('chat').push({ nome: meuNome, avatar: meuAvatar, mensagem: msg });
             }
+            inputMsg.value = '';
         }
+
         btnEnviar.addEventListener('click', enviarMensagem);
         inputMsg.addEventListener('keypress', (e) => { if (e.key === 'Enter') enviarMensagem(); });
 
-        socket.on('chat', (dados) => {
+        database.ref('chat').on('child_added', (snapshot) => {
+            const dados = snapshot.val();
             const novaMsg = document.createElement('div');
             novaMsg.className = 'msg-box';
-            let tagImagemEnviada = dados.imagemEnviada ? `<img src="${dados.imagemEnviada}" class="img-no-chat">` : "";
             
-            // Destaca mensagens do sistema (como avisos de acerto)
             if (dados.nome === "SISTEMA") {
                 novaMsg.innerHTML = `<div class="msg-conteudo" style="background:#1b5e20; border:1px solid #4caf50; text-align:center;"><strong>${dados.nome}</strong>${dados.mensagem}</div>`;
             } else {
-                novaMsg.innerHTML = `
-                    <img src="${dados.avatar}" class="msg-avatar">
-                    <div class="msg-conteudo">
-                        <strong>${dados.nome}</strong> ${dados.mensagem} ${tagImagemEnviada}
-                    </div>
-                `;
+                novaMsg.innerHTML = `<img src="${dados.avatar}" class="msg-avatar"><div class="msg-conteudo"><strong>${dados.nome}</strong> ${dados.mensagem}</div>`;
             }
             divChat.appendChild(novaMsg); divChat.scrollTop = divChat.scrollHeight;
         });
