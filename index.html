@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gartic Multiplayer - Render</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1e24; color: white; display: flex; height: 100vh; overflow: hidden; }
+        #canvas-area { flex: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; background-color: #15151a; }
+        .tools { margin-bottom: 15px; display: flex; gap: 15px; align-items: center; background: #2b2b36; padding: 10px 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        .tools label { font-size: 14px; font-weight: bold; display: flex; align-items: center; gap: 5px; }
+        canvas { background: white; border-radius: 8px; cursor: crosshair; box-shadow: 0 8px 24px rgba(0,0,0,0.4); display: block; }
+        #sidebar-chat { flex: 1; background: #2b2b36; display: flex; flex-direction: column; border-left: 2px solid #15151a; min-width: 300px; }
+        .chat-messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .message { background: #444455; padding: 10px; border-radius: 8px; word-break: break-word; line-height: 1.4; }
+        .message strong { color: #3498db; }
+        .chat-input-area { padding: 15px; display: flex; gap: 10px; background: #3a3a48; border-top: 1px solid #15151a; }
+        input[type="text"] { flex: 1; padding: 12px; border-radius: 6px; border: none; font-size: 14px; background: #ffffff; color: #000000; }
+        input[type="text"]:focus { outline: 2px solid #3498db; }
+        input[type="color"] { border: none; width: 40px; height: 40px; border-radius: 5px; cursor: pointer; background: none; }
+        button { padding: 12px 20px; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        .btn-send { background: #4CAF50; }
+        .btn-send:hover { background: #45a049; }
+        .btn-clear { background: #e74c3c; }
+        .btn-clear:hover { background: #c0392b; }
+        #status-conexao { padding: 10px; text-align: center; font-style: italic; font-size: 14px; font-weight: bold; border-bottom: 1px solid #15151a; }
+    </style>
+</head>
+<body>
+
+    <div id="canvas-area">
+        <div class="tools">
+            <label>Cor: <input type="color" id="colorPicker" value="#000000"></label>
+            <label>Tamanho: <input type="range" id="lineWidth" min="1" max="20" value="5"></label>
+            <button class="btn-clear" onclick="limparLousa()">Limpar Lousa</button>
+        </div>
+        <canvas id="drawingCanvas" width="700" height="500"></canvas>
+    </div>
+
+    <div id="sidebar-chat">
+        <div id="status-conexao" style="color: #ffeb3b; background: #22222b;">Conectando ao Render...</div>
+        <div class="chat-messages" id="chatMessages"></div>
+        <div class="chat-input-area">
+            <input type="text" id="nomeInput" placeholder="Nome" style="max-width: 80px;">
+            <input type="text" id="chatInput" placeholder="Digite uma mensagem..." onkeypress="if(event.key === 'Enter') enviarMensagem()">
+            <button class="btn-send" onclick="enviarMensagem()">Enviar</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+    <script>
+        const canvas = document.getElementById('drawingCanvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        
+        ctx.fillStyle = "#ffffff"; 
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // O LINK DO SEU SERVIDOR JÁ ESTÁ AQUI
+        const socket = io("https://meu-site-abaitolado.onrender.com");
+
+        socket.on('connect', () => {
+            const status = document.getElementById('status-conexao');
+            status.innerText = "✅ Conectado ao seu Servidor Render!";
+            status.style.color = "#4CAF50";
+        });
+
+        socket.on('connect_error', () => {
+            const status = document.getElementById('status-conexao');
+            status.innerText = "❌ Servidor Render dormindo ou indisponível.";
+            status.style.color = "#e74c3c";
+        });
+
+        // Recebendo mensagens do chat
+        socket.on('chat', (dados) => {
+            const chatBox = document.getElementById('chatMessages');
+            chatBox.innerHTML += `<div class="message"><strong>${dados.usuario}:</strong> ${dados.texto}</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+        // Recebendo desenhos dos outros
+        socket.on('desenho', (dados) => {
+            if (dados.acao === 'desenhar') {
+                ctx.lineWidth = dados.espessura;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = dados.cor;
+                ctx.lineTo(dados.x, dados.y);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(dados.x, dados.y);
+            } else if (dados.acao === 'parar') {
+                ctx.beginPath();
+            } else if (dados.acao === 'limpar') {
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.beginPath();
+            }
+        });
+
+        function enviarMensagem() {
+            const inputMsg = document.getElementById('chatInput');
+            const inputNome = document.getElementById('nomeInput');
+            const texto = inputMsg.value.trim();
+            const usuario = inputNome.value.trim() || "Anônimo";
+
+            if (texto !== '') {
+                socket.emit('chat', { usuario, texto });
+                inputMsg.value = '';
+            }
+        }
+
+        canvas.addEventListener('mousedown', (e) => { 
+            isDrawing = true; 
+            ctx.beginPath();
+            desenhar(e); 
+        });
+        
+        canvas.addEventListener('mousemove', (e) => { 
+            if(isDrawing) desenhar(e); 
+        });
+        
+        canvas.addEventListener('mouseup', () => { 
+            isDrawing = false; 
+            ctx.beginPath(); 
+            socket.emit('desenho', { acao: 'parar' });
+        });
+
+        function desenhar(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const cor = document.getElementById('colorPicker').value;
+            const espessura = document.getElementById('lineWidth').value;
+
+            // Desenha localmente
+            ctx.lineWidth = espessura;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = cor;
+            ctx.lineTo(x, y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+
+            // Envia para o servidor
+            socket.emit('desenho', { acao: 'desenhar', x, y, cor, espessura });
+        }
+
+        function limparLousa() {
+            // Limpa local
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            // Avisa o servidor
+            socket.emit('desenho', { acao: 'limpar' });
+        }
+    </script>
+</body>
+</html>
