@@ -58,11 +58,8 @@
         ctx.fillStyle = "#ffffff"; 
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // ========================================================
-        // COLE AQUI O LINK DO SEU SERVIDOR RENDER
-        // Exemplo: "https://backend-jogo.onrender.com"
-        // ========================================================
-        const socket = io("COLE_AQUI_O_SEU_LINK_DO_RENDER");
+        // O LINK DO SEU SERVIDOR JÁ ESTÁ AQUI
+        const socket = io("https://meu-site-abaitolado.onrender.com");
 
         socket.on('connect', () => {
             const status = document.getElementById('status-conexao');
